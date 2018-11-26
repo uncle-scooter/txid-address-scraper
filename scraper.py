@@ -1,58 +1,40 @@
-import unittest
 from blockchain.blockexplorer import *
 
-addresses = []
+wallets = []
+depth = 4
 
-def scrapeHash(txid):
-  inputs = []
-  getOutputAddressesByHash(txid)
-  for inp in getInputsByHash(txid):
-    addresses.append(inp.address)
-    inputs += getInputsByAddress(inp.address)
-  scrapeInputs(inputs)
+class Scraper():
 
-def scrapeInputs(inputs):
-  res = []
-  if(len(inputs) > 0 ):
-    print(len(inputs))
-    for inp in inputs:
-      try: res += getInputsByAddress(inp.address, inp.value)
-      except: pass
-    scrapeInputs(res)
-  print('final'+ str(len(inputs)))
+  txs = []
 
-def getOutputAddressesByHash(txid, address):
-    tx = get_tx(txid)
-    output = list(filter(lambda output: output.address == address, tx.outputs))
-    if(len(output) > 0): return output[0]
+  def __init__(self, txid, depth):
+    self.getInputs(txid)
+    self.txs.append({'addresses': self.addresses, 'hash': txid})
+    self.__main__(txid, depth)
 
-def findOutput(address, output):
-  print 1
+  def __main__(self, txid, depth):
     
-def getInputsByAddress(address):
-  txs = getAddress(address).transactions
-  if(txs):
-    inputs = []
-    output = list(filter(lambda tx: getOutputAddressesByHash(tx.hash, address), txs))[0]
-    if(output): print (output.hash)
+    print self.txs
 
-      # for output in tx.outputs:
-      #   if output.address == address:
-      #     inputs += tx.inputs
-    return inputs
-  else:
-    return []
-       
-def getInputsByHash(txid):
-    tx = get_tx(txid)
-    return tx.inputs
-      
-def getAddress(address):
-  return get_address(address)
+    if(depth == 0): return
 
+    self.depth = depth - 1
+    self.getInputs(txid)
+
+    for x in self.inputs:
+      self.getTxs(x.address, txid)
     
-# getOutputAddressesByHash('828ef3b079f9c23829c56fe86e85b4a69d9e06e5b54ea597eef5fb3ffef509fe')
-# getInputsByHash('828ef3b079f9c23829c56fe86e85b4a69d9e06e5b54ea597eef5fb3ffef509fe')
+    self.__main__(self.hash, self.depth)
 
-getInputsByAddress('1ByLSV2gLRcuqUmfdYcpPQH8Npm8cccsFg')
+  def getInputs(self, txid):
+    self.inputs = get_tx(txid).inputs
+    self.addresses = list(map(lambda x: x.address, self.inputs))
 
+  def getTxs(self, address, txid):
+    txs = get_address(address).transactions
+    tx = filter(lambda x: x.hash != txid, txs)[0]
+    self.hash = tx.hash
+    self.tx = list(map(lambda x: x.address, tx.inputs))
+    self.txs.append({'addresses': self.tx, 'mainAddress': address, 'hash': tx.hash})
+    
+s = Scraper('2f7e8182090f2cfaf0c5c20e609f6fbfb3d84b3e1d504a21c70aa21f0d993fe8', 4)
