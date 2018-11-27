@@ -1,0 +1,20 @@
+service: txid-address-scraper 
+
+provider:
+  name: aws
+  region: us-east-1
+  profile: default
+  runtime: python3.6
+  memorySize: 2048
+
+functions:
+  scrapeTx:
+    handler: handler.scrapeTx
+    timeout: 180
+    events:
+      - http:
+          path: txid/{id}/{depth}
+          method: get
+
+plugins:
+  - serverless-python-requirements

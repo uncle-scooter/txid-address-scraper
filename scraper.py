@@ -1,40 +1,59 @@
 from blockchain.blockexplorer import *
 
-wallets = []
-depth = 4
-
+# TXID Scraper
+# Requires:
+# - TXID: Hash for Bitcoin Transaction
+# - depth: Number of steps in chain to traverse and scrape 
 class Scraper():
 
+  # Main List of Txs
   txs = []
 
+  # Initialize Scraper
   def __init__(self, txid, depth):
-    self.getInputs(txid)
-    self.txs.append({'addresses': self.addresses, 'hash': txid})
+    self.depth = depth
     self.__main__(txid, depth)
 
   def __main__(self, txid, depth):
-    
-    print self.txs
 
+    hashes = []
+    inputs = []
+    
     if(depth == 0): return
-
-    self.depth = depth - 1
-    self.getInputs(txid)
-
-    for x in self.inputs:
-      self.getTxs(x.address, txid)
     
-    self.__main__(self.hash, self.depth)
+    # Handles initial Tx Input
+    if type(txid) is str:
+      inputs = list(map(lambda x: x.address, self.getInputs(txid)))
+      for x in inputs:
+        hashes.append({'hash': txid, 'inputs': inputs})
 
+    # Handles previos output data
+    if type(txid) is list:
+      for tx in txid:
+        inputs += tx['inputs']
+        txHash = tx['hash']
+        for x in inputs:
+          hashes.append(self.getTxs(x, txHash))
+ 
+    self.txs += hashes
+    self.decreaseDepth() # Decreases depth for recursion
+    self.__main__(hashes, self.depth) # Repeat process with new data and higher depth
+
+  # Traverse up-chain
+  def decreaseDepth(self):
+    self.depth = self.depth - 1
+
+  # Low-level input gathering from TX
   def getInputs(self, txid):
-    self.inputs = get_tx(txid).inputs
-    self.addresses = list(map(lambda x: x.address, self.inputs))
-
+    return get_tx(txid).inputs
+    
+  # Gather data on input and hash
   def getTxs(self, address, txid):
     txs = get_address(address).transactions
-    tx = filter(lambda x: x.hash != txid, txs)[0]
-    self.hash = tx.hash
-    self.tx = list(map(lambda x: x.address, tx.inputs))
-    self.txs.append({'addresses': self.tx, 'mainAddress': address, 'hash': tx.hash})
+    tx = list(filter(lambda x: x.hash != txid, txs))[0]
+    return {'hash': tx.hash, 'inputs': list(map(lambda x: x.address, tx.inputs))}
     
-s = Scraper('2f7e8182090f2cfaf0c5c20e609f6fbfb3d84b3e1d504a21c70aa21f0d993fe8', 4)
+  # Final Retrieval for list of Txs
+  def getResults(self):
+    return self.txs
+
